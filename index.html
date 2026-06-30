@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Linux 镜像跳转站</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23f7971e' d='M50 10C30 10 15 25 15 45c0 12 6 22 15 28v10c0 4 3 7 7 7h26c4 0 7-3 7-7V73c9-6 15-16 15-28 0-20-15-35-35-35z'/%3E%3Cpath fill='%23f7971e' d='M35 55c-3 0-5-2-5-5s2-5 5-5 5 2 5 5-2 5-5 5zm30 0c-3 0-5-2-5-5s2-5 5-5 5 2 5 5-2 5-5 5z'/%3E%3Cpath fill='%23f7971e' d='M40 70c0 3 2 5 5 5h10c3 0 5-2 5-5v-5H40v5z'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        /* ===== 全局 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0b0e14;
+            color: #e4e9f2;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            flex: 1;
+            width: 100%;
+        }
+
+        /* ===== 头部 ===== */
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .header h1 .tux-icon {
+            -webkit-text-fill-color: initial;
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
+        }
+
+        .header p {
+            color: #8892a8;
+            margin-top: 0.3rem;
+            font-size: 1.05rem;
+        }
+
+        /* ===== 统计 ===== */
+        .stats {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #8892a8;
+            margin-bottom: 1.8rem;
+        }
+        .stats span {
+            color: #ffd700;
+            font-weight: 600;
+        }
+
+        /* ===== 筛选栏 ===== */
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem 1.2rem;
+            justify-content: center;
+            background: #161c26;
+            padding: 1.2rem 2rem;
+            border-radius: 16px;
+            margin-bottom: 2.5rem;
+            border: 1px solid #262e3a;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #8892a8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: 1px solid #2d3748;
+            color: #b0baca;
+            padding: 0.25rem 1rem;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            border-color: #f7971e;
+            color: #fff;
+        }
+
+        .filter-btn.active {
+            background: #f7971e;
+            border-color: #f7971e;
+            color: #0b0e14;
+            font-weight: 600;
+        }
+
+        .reset-btn {
+            background: transparent;
+            border: 1px solid #4a5568;
+            color: #8892a8;
+            padding: 0.25rem 1.2rem;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 0.3rem;
+        }
+
+        .reset-btn:hover {
+            background: #4a5568;
+            color: #fff;
+        }
+
+        /* ===== 卡片网格 ===== */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: #141b24;
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            padding: 1.5rem 1.2rem 1.2rem;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: #f7971e;
+            box-shadow: 0 12px 30px rgba(247, 151, 30, 0.08);
+        }
+
+        .card .logo {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            object-fit: contain;
+            background: #1f2937;
+            padding: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        .card .name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.1rem;
+        }
+
+        .card .desc {
+            font-size: 0.85rem;
+            color: #8892a8;
+            margin-bottom: 0.6rem;
+            flex: 1;
+            min-height: 40px;
+        }
+
+        .card .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin: 0.3rem 0 0.8rem;
+        }
+
+        .card .tags span {
+            background: #1f2937;
+            padding: 0.1rem 0.7rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #b0baca;
+            letter-spacing: 0.3px;
+        }
+
+        .card .tags span.family-debian {
+            background: #1e3a5f;
+            color: #6ab0ff;
+        }
+        .card .tags span.family-redhat {
+            background: #3d1e1e;
+            color: #ff7b7b;
+        }
+        .card .tags span.family-arch {
+            background: #1e3d3d;
+            color: #5dd9d9;
+        }
+        .card .tags span.family-other {
+            background: #2d2d3d;
+            color: #b8b8e0;
+        }
+        .card .tags span.hot-tag {
+            background: #3d2a1a;
+            color: #ffb347;
+        }
+
+        .card .year-badge {
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            font-size: 0.7rem;
+            color: #4a5568;
+            background: #1f2937;
+            padding: 0.1rem 0.6rem;
+            border-radius: 30px;
+            font-weight: 500;
+        }
+
+        /* ===== 按钮组：官方 + 国内镜像 ===== */
+        .card .btn-group {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 0.3rem;
+            flex-wrap: wrap;
+        }
+
+        .card .btn-group a {
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+            padding: 0.45rem 0;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-official {
+            background: #f7971e;
+            color: #0b0e14;
+        }
+        .btn-official:hover {
+            background: #ffa82e;
+            transform: scale(1.02);
+        }
+
+        .btn-mirror {
+            background: transparent;
+            color: #6aaf5c;
+            border: 1px solid #2d5a2d;
+        }
+        .btn-mirror:hover {
+            background: #1a3a1a;
+            border-color: #6aaf5c;
+        }
+
+        .btn-mirror.no-mirror {
+            color: #4a5568;
+            border-color: #2d3748;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        .btn-mirror.no-mirror:hover {
+            background: transparent;
+            transform: none;
+        }
+
+        /* ===== 空状态 ===== */
+        .empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 0;
+            color: #4a5568;
+        }
+        .empty i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.4;
+        }
+
+        /* ===== 页脚 ===== */
+        .footer {
+            margin-top: 3rem;
+            padding: 1.5rem 0;
+            text-align: center;
+            border-top: 1px solid #1f2937;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+        .footer a {
+            color: #f7971e;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+            .header h1 .tux-icon {
+                width: 36px;
+                height: 36px;
+            }
+            .filters {
+                padding: 1rem;
+                gap: 0.6rem;
+            }
+            .filter-group {
+                width: 100%;
+                justify-content: center;
+            }
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <!-- ===== 头部 ===== -->
+        <div class="header">
+            <h1>
+                <svg class="tux-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="50" cy="40" rx="32" ry="28" fill="#f7971e" />
+                    <ellipse cx="50" cy="40" rx="32" ry="28" fill="none" stroke="#d4880f" stroke-width="1.5" />
+                    <ellipse cx="36" cy="34" rx="6" ry="7" fill="white" />
+                    <ellipse cx="64" cy="34" rx="6" ry="7" fill="white" />
+                    <ellipse cx="36" cy="34" rx="3.5" ry="4" fill="#1a1e26" />
+                    <ellipse cx="64" cy="34" rx="3.5" ry="4" fill="#1a1e26" />
+                    <ellipse cx="36" cy="37" rx="1.5" ry="1.5" fill="white" />
+                    <ellipse cx="64" cy="37" rx="1.5" ry="1.5" fill="white" />
+                    <ellipse cx="50" cy="46" rx="9" ry="5" fill="#d4880f" />
+                    <path d="M44 46 Q50 52 56 46" stroke="#1a1e26" stroke-width="1.8" fill="none" />
+                    <ellipse cx="44" cy="52" rx="4" ry="3" fill="#1a1e26" />
+                    <ellipse cx="56" cy="52" rx="4" ry="3" fill="#1a1e26" />
+                    <path d="M32 56 Q35 70 50 72 Q65 70 68 56" fill="#f7971e" stroke="#d4880f" stroke-width="1" />
+                    <path d="M42 72 L42 78 L58 78 L58 72" fill="#f7971e" stroke="#d4880f" stroke-width="1" />
+                    <rect x="40" y="78" width="20" height="4" rx="1" fill="#d4880f" />
+                    <ellipse cx="38" cy="56" rx="5" ry="4" fill="#d4880f" />
+                    <ellipse cx="62" cy="56" rx="5" ry="4" fill="#d4880f" />
+                    <path d="M32 56 L26 62 L34 60 Z" fill="#d4880f" />
+                    <path d="M68 56 L74 62 L66 60 Z" fill="#d4880f" />
+                    <path d="M18 44 L12 38 L14 46 Z" fill="#d4880f" />
+                    <path d="M82 44 L88 38 L86 46 Z" fill="#d4880f" />
+                    <path d="M22 34 L16 28 L20 36 Z" fill="#d4880f" />
+                    <path d="M78 34 L84 28 L80 36 Z" fill="#d4880f" />
+                </svg>
+                Linux 镜像跳转站
+            </h1>
+            <p>官方下载 · 国内镜像源 · 一键直达</p>
+        </div>
+
+        <!-- ===== 统计 ===== -->
+        <div class="stats">
+            共 <span id="totalCount">0</span> 个发行版
+        </div>
+
+        <!-- ===== 筛选栏 ===== -->
+        <div class="filters">
+            <!-- 系列 -->
+            <div class="filter-group">
+                <label><i class="fas fa-layer-group"></i> 系列</label>
+                <button class="filter-btn active" data-type="family" data-value="all">全部</button>
+                <button class="filter-btn" data-type="family" data-value="debian">Debian</button>
+                <button class="filter-btn" data-type="family" data-value="redhat">RedHat</button>
+                <button class="filter-btn" data-type="family" data-value="arch">Arch</button>
+                <button class="filter-btn" data-type="family" data-value="other">其他</button>
+            </div>
+
+            <!-- 热门 -->
+            <div class="filter-group">
+                <label><i class="fas fa-fire"></i> 热门</label>
+                <button class="filter-btn active" data-type="hot" data-value="all">全部</button>
+                <button class="filter-btn" data-type="hot" data-value="1">⭐ 热门</button>
+            </div>
+
+            <!-- 年份 -->
+            <div class="filter-group">
+                <label><i class="far fa-calendar-alt"></i> 年份</label>
+                <button class="filter-btn active" data-type="year" data-value="all">全部</button>
+                <button class="filter-btn" data-type="year" data-value="2026">2026</button>
+                <button class="filter-btn" data-type="year" data-value="2025">2025</button>
+                <button class="filter-btn" data-type="year" data-value="2024">2024</button>
+                <button class="filter-btn" data-type="year" data-value="older">更早</button>
+            </div>
+
+            <button class="reset-btn" id="resetFilters"><i class="fas fa-undo"></i> 重置</button>
+        </div>
+
+        <!-- ===== 卡片列表 ===== -->
+        <div class="card-grid" id="cardGrid"></div>
+
+    </div>
+
+    <!-- ===== 页脚 ===== -->
+    <div class="footer">
+        <i class="fab fa-github"></i>
+        <a href="https://github.com/CNFinder-Linux/F-Linux" target="_blank">CNFinder-Linux/F-Linux</a>
+        <span style="margin:0 0.6rem;">·</span>
+        开源项目 · 欢迎 Star
+    </div>
+
+    <script>
+        // ============================================================
+        //  数据：Linux 发行版（15 个，保持不变）
+        // ============================================================
+        var distros = [{
+            id: 1,
+            name: 'Ubuntu',
+            domain: 'ubuntu.com',
+            desc: '最流行的桌面/服务器发行版，基于 Debian',
+            family: 'debian',
+            year: 2026,
+            hot: true,
+            officialUrl: 'https://ubuntu.com/download',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/ubuntu-releases/'
+        }, {
+            id: 2,
+            name: 'Debian',
+            domain: 'debian.org',
+            desc: '稳定著称的社区发行版，众多发行版之母',
+            family: 'debian',
+            year: 2025,
+            hot: true,
+            officialUrl: 'https://www.debian.org/distrib/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/debian-cd/'
+        }, {
+            id: 3,
+            name: 'Fedora',
+            domain: 'fedoraproject.org',
+            desc: 'RedHat 上游，新技术先驱，每半年发版',
+            family: 'redhat',
+            year: 2026,
+            hot: true,
+            officialUrl: 'https://fedoraproject.org/zh-Hans/workstation/download/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/fedora/releases/'
+        }, {
+            id: 4,
+            name: 'RHEL',
+            domain: 'redhat.com',
+            desc: 'Red Hat Enterprise Linux，企业级付费发行版',
+            family: 'redhat',
+            year: 2025,
+            hot: true,
+            officialUrl: 'https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux',
+            mirrorUrl: null
+        }, {
+            id: 5,
+            name: 'Arch Linux',
+            domain: 'archlinux.org',
+            desc: '滚动更新，极简主义，KISS 哲学',
+            family: 'arch',
+            year: 2026,
+            hot: true,
+            officialUrl: 'https://archlinux.org/download/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/archlinux/iso/'
+        }, {
+            id: 6,
+            name: 'Manjaro',
+            domain: 'manjaro.org',
+            desc: '基于 Arch，开箱即用，友好新手',
+            family: 'arch',
+            year: 2025,
+            hot: false,
+            officialUrl: 'https://manjaro.org/download/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/manjaro/'
+        }, {
+            id: 7,
+            name: 'CentOS Stream',
+            domain: 'centos.org',
+            desc: 'RHEL 的下游滚动开发版，社区驱动',
+            family: 'redhat',
+            year: 2025,
+            hot: false,
+            officialUrl: 'https://www.centos.org/download/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/centos-stream/'
+        }, {
+            id: 8,
+            name: 'openSUSE',
+            domain: 'opensuse.org',
+            desc: '德国制造，稳定且强大的企业级发行版',
+            family: 'other',
+            year: 2025,
+            hot: false,
+            officialUrl: 'https://get.opensuse.org/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/opensuse/'
+        }, {
+            id: 9,
+            name: 'Gentoo',
+            domain: 'gentoo.org',
+            desc: '源码编译，高度可定制，极致性能',
+            family: 'other',
+            year: 2024,
+            hot: false,
+            officialUrl: 'https://www.gentoo.org/downloads/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/gentoo/'
+        }, {
+            id: 10,
+            name: 'AlmaLinux',
+            domain: 'almalinux.org',
+            desc: 'RHEL 克隆，CentOS 替代首选',
+            family: 'redhat',
+            year: 2025,
+            hot: false,
+            officialUrl: 'https://almalinux.org/download/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/almalinux/'
+        }, {
+            id: 11,
+            name: 'Rocky Linux',
+            domain: 'rockylinux.org',
+            desc: 'RHEL 克隆，社区驱动，企业级',
+            family: 'redhat',
+            year: 2025,
+            hot: false,
+            officialUrl: 'https://rockylinux.org/download/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/rockylinux/'
+        }, {
+            id: 12,
+            name: 'Linux Mint',
+            domain: 'linuxmint.com',
+            desc: '基于 Ubuntu，Cinnamon 桌面，优雅易用',
+            family: 'debian',
+            year: 2026,
+            hot: true,
+            officialUrl: 'https://linuxmint.com/download.php',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/linuxmint/'
+        }, {
+            id: 13,
+            name: 'Kali Linux',
+            domain: 'kali.org',
+            desc: '渗透测试专用，基于 Debian',
+            family: 'debian',
+            year: 2025,
+            hot: false,
+            officialUrl: 'https://www.kali.org/get-kali/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/kali-images/'
+        }, {
+            id: 14,
+            name: 'EndeavourOS',
+            domain: 'endeavouros.com',
+            desc: 'Arch 系，轻量且美观，滚动更新',
+            family: 'arch',
+            year: 2025,
+            hot: false,
+            officialUrl: 'https://endeavouros.com/download/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/endeavouros/'
+        }, {
+            id: 15,
+            name: 'NixOS',
+            domain: 'nixos.org',
+            desc: '声明式配置，不可变系统，极客最爱',
+            family: 'other',
+            year: 2025,
+            hot: false,
+            officialUrl: 'https://nixos.org/download/',
+            mirrorUrl: 'https://mirrors.ustc.edu.cn/nixos/'
+        }];
+
+        // ============================================================
+        //  渲染逻辑（完全保留第一版，未改动）
+        // ============================================================
+        var grid = document.getElementById('cardGrid');
+        var totalSpan = document.getElementById('totalCount');
+
+        var filters = {
+            family: 'all',
+            hot: 'all',
+            year: 'all'
+        };
+
+        var filterBtns = document.querySelectorAll('.filter-btn');
+
+        filterBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var type = this.dataset.type;
+                var value = this.dataset.value;
+                var group = this.closest('.filter-group');
+                if (group) {
+                    var btns = group.querySelectorAll('.filter-btn');
+                    for (var i = 0; i < btns.length; i++) {
+                        btns[i].classList.remove('active');
+                    }
+                }
+                this.classList.add('active');
+                filters[type] = value;
+                render();
+            });
+        });
+
+        document.getElementById('resetFilters').addEventListener('click', function() {
+            var allBtns = document.querySelectorAll('.filter-btn');
+            for (var i = 0; i < allBtns.length; i++) {
+                if (allBtns[i].dataset.value === 'all') {
+                    allBtns[i].classList.add('active');
+                } else {
+                    allBtns[i].classList.remove('active');
+                }
+            }
+            filters.family = 'all';
+            filters.hot = 'all';
+            filters.year = 'all';
+            render();
+        });
+
+        function render() {
+            var filtered = [];
+            for (var i = 0; i < distros.length; i++) {
+                var d = distros[i];
+                if (filters.family !== 'all' && d.family !== filters.family) continue;
+                if (filters.hot !== 'all' && !d.hot) continue;
+                if (filters.year !== 'all') {
+                    if (filters.year === 'older') {
+                        if (d.year >= 2024) continue;
+                    } else {
+                        if (d.year !== parseInt(filters.year)) continue;
+                    }
+                }
+                filtered.push(d);
+            }
+
+            totalSpan.textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="empty"><i class="fas fa-search"></i><p>没有匹配的发行版，试试调整筛选条件</p></div>';
+                return;
+            }
+
+            var html = '';
+            for (var j = 0; j < filtered.length; j++) {
+                var d = filtered[j];
+                var yearLabel = d.year < 2024 ? '更早' : d.year;
+
+                var familyMap = {
+                    debian: 'Debian系',
+                    redhat: 'RedHat系',
+                    arch: 'Arch系',
+                    other: '其他'
+                };
+                var familyLabel = familyMap[d.family] || d.family;
+
+                var mirrorBtn = '';
+                if (d.mirrorUrl) {
+                    mirrorBtn = '<a href="' + d.mirrorUrl + '" target="_blank" class="btn-mirror"><i class="fas fa-server"></i> 国内镜像</a>';
+                } else {
+                    mirrorBtn = '<span class="btn-mirror no-mirror"><i class="fas fa-server"></i> 无镜像</span>';
+                }
+
+                var hotTag = d.hot ? '<span class="hot-tag">🔥 热门</span>' : '';
+
+                html +=
+                    '<div class="card">' +
+                    '<span class="year-badge">' + yearLabel + '</span>' +
+                    '<img class="logo" src="https://www.google.com/s2/favicons?domain=' + d.domain + '" alt="' + d.name +
+                    '" onerror="this.style.display=\'none\'" />' +
+                    '<div class="name">' + d.name + '</div>' +
+                    '<div class="desc">' + d.desc + '</div>' +
+                    '<div class="tags">' +
+                    '<span class="family-' + d.family + '">' + familyLabel + '</span>' +
+                    hotTag +
+                    '</div>' +
+                    '<div class="btn-group">' +
+                    '<a href="' + d.officialUrl + '" target="_blank" class="btn-official"><i class="fas fa-download"></i> 官方下载</a>' +
+                    mirrorBtn +
+                    '</div>' +
+                    '</div>';
+            }
+
+            grid.innerHTML = html;
+        }
+
+        render();
+    </script>
+
+</body>
+</html>
